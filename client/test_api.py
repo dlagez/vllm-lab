@@ -1,10 +1,8 @@
-﻿from pathlib import Path
+﻿from client.config import load_client_config
 
 import requests
-from dotenv import dotenv_values
 
-env_path = Path(__file__).resolve().parents[1] / '.env'
-config = dotenv_values(env_path)
+config = load_client_config()
 
 
 def _build_url() -> str:

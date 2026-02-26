@@ -1,10 +1,8 @@
-﻿from pathlib import Path
+﻿from client.config import load_client_config
 
 import requests
-from dotenv import dotenv_values
 
-env_path = Path(__file__).resolve().parents[1] / '.env'
-config = dotenv_values(env_path)
+config = load_client_config()
 
 base_url = (config.get('OPENAI_BASE_URL') or '').rstrip('/')
 model = config.get('MODEL_NAME') or ''
