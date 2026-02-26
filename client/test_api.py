@@ -1,27 +1,36 @@
-﻿import os
-from pathlib import Path
+﻿from pathlib import Path
 
 import requests
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
-load_dotenv(Path(__file__).resolve().parents[1] / '.env')
+env_path = Path(__file__).resolve().parents[1] / '.env'
+config = dotenv_values(env_path)
 
 
 def _build_url() -> str:
-    base_url = os.getenv('OPENAI_BASE_URL', 'http://127.0.0.1:8000/v1').rstrip('/')
+    base_url = (config.get('OPENAI_BASE_URL') or '').rstrip('/')
+    if not base_url:
+        raise RuntimeError('Missing OPENAI_BASE_URL in .env')
     return f"{base_url}/chat/completions"
 
 
 def _build_headers() -> dict[str, str]:
-    api_key = os.getenv('OPENAI_API_KEY', '').strip()
+    api_key = (config.get('OPENAI_API_KEY') or '').strip()
     if api_key and api_key != 'EMPTY':
         return {'Authorization': f'Bearer {api_key}'}
     return {}
 
 
+def _model_name() -> str:
+    model = config.get('MODEL_NAME') or ''
+    if not model:
+        raise RuntimeError('Missing MODEL_NAME in .env')
+    return model
+
+
 def test_chat_completion():
     payload = {
-        'model': os.getenv('MODEL_NAME', 'Qwen/Qwen2.5-3B-Instruct'),
+        'model': _model_name(),
         'messages': [{'role': 'user', 'content': '1+1 equals what?'}],
         'temperature': 0.0,
         'max_tokens': 10,

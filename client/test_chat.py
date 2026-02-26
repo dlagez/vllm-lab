@@ -1,15 +1,19 @@
-﻿import os
-from pathlib import Path
+﻿from pathlib import Path
 
 import requests
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
-load_dotenv(Path(__file__).resolve().parents[1] / '.env')
+env_path = Path(__file__).resolve().parents[1] / '.env'
+config = dotenv_values(env_path)
 
-base_url = os.getenv('OPENAI_BASE_URL', 'http://127.0.0.1:8000/v1').rstrip('/')
+base_url = (config.get('OPENAI_BASE_URL') or '').rstrip('/')
+model = config.get('MODEL_NAME') or ''
+api_key = (config.get('OPENAI_API_KEY') or '').strip()
+
+if not base_url or not model:
+    raise RuntimeError('Missing OPENAI_BASE_URL or MODEL_NAME in .env')
+
 url = f"{base_url}/chat/completions"
-model = os.getenv('MODEL_NAME', 'Qwen/Qwen2.5-3B-Instruct')
-api_key = os.getenv('OPENAI_API_KEY', '').strip()
 headers = {'Authorization': f'Bearer {api_key}'} if api_key and api_key != 'EMPTY' else {}
 
 payload = {
