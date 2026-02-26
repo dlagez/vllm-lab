@@ -1,4 +1,4 @@
-﻿from client.config import load_client_config
+﻿from config import load_client_config
 
 import requests
 
