@@ -6,6 +6,7 @@ from typing import Any, AsyncGenerator
 
 import httpx
 import uvicorn
+import yaml
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -15,11 +16,44 @@ load_dotenv()
 
 app = FastAPI(title="vLLM Gateway", version="0.1.0")
 
-GATEWAY_HOST = os.getenv("GATEWAY_HOST", "0.0.0.0")
-GATEWAY_PORT = int(os.getenv("GATEWAY_PORT", "8000"))
-DEFAULT_MODEL = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-3B-Instruct")
-VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "").rstrip("/")
-VLLM_API_KEY = os.getenv("VLLM_API_KEY", "EMPTY")
+CONFIG_PATH = os.getenv("MODEL_CONFIG_PATH", "configs/model_config.yaml")
+
+
+def _load_yaml_config(path: str) -> dict[str, Any]:
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+CONFIG = _load_yaml_config(CONFIG_PATH)
+
+
+def _pick(name: str, env_key: str, default: Any) -> Any:
+    value = os.getenv(env_key)
+    if value not in (None, ""):
+        return value
+    if name in CONFIG and CONFIG[name] not in (None, ""):
+        return CONFIG[name]
+    return default
+
+
+DEFAULT_MODEL = str(_pick("model", "MODEL_NAME", "Qwen/Qwen2.5-3B-Instruct"))
+GATEWAY_HOST = str(_pick("gateway_host", "GATEWAY_HOST", "0.0.0.0"))
+GATEWAY_PORT = int(_pick("gateway_port", "GATEWAY_PORT", 8000))
+VLLM_API_KEY = str(_pick("vllm_api_key", "VLLM_API_KEY", "EMPTY"))
+
+_yaml_vllm_base_url = CONFIG.get("vllm_base_url")
+if not _yaml_vllm_base_url and CONFIG.get("host") and CONFIG.get("port"):
+    # If config uses vLLM server host/port shape, derive OpenAI-compatible base URL.
+    cfg_host = str(CONFIG["host"])
+    cfg_port = int(CONFIG["port"])
+    connect_host = "127.0.0.1" if cfg_host == "0.0.0.0" else cfg_host
+    _yaml_vllm_base_url = f"http://{connect_host}:{cfg_port}/v1"
+VLLM_BASE_URL = str(os.getenv("VLLM_BASE_URL", _yaml_vllm_base_url or "")).rstrip("/")
 
 
 class ChatCompletionRequest(BaseModel):
@@ -136,6 +170,7 @@ def health() -> dict[str, Any]:
         "mode": "proxy" if VLLM_BASE_URL else "local_fallback",
         "vllm_base_url": VLLM_BASE_URL or None,
         "model": DEFAULT_MODEL,
+        "config_path": CONFIG_PATH,
     }
 
 

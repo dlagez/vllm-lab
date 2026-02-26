@@ -4,3 +4,10 @@ port: 8001
 dtype: "auto"
 max_model_len: 4096
 gpu_memory_utilization: 0.9
+
+# Gateway settings (optional)
+gateway_host: "0.0.0.0"
+gateway_port: 8009
+
+# Optional explicit backend URL. If empty, gateway derives it from host/port above.
+# vllm_base_url: "http://127.0.0.1:8001/v1"
